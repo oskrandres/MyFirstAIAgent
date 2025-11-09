@@ -1,0 +1,10 @@
+{
+  "name": "agents-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@azure/identity": "^4.5.0"
+  }
+}

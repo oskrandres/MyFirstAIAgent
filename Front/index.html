@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>IaC Terraform Azure – Chat (Agents Proxy)</title>
+  <style>
+    :root{
+      --bg:#0f172a;          /* slate-900 */
+      --panel:#111827;       /* gray-900 */
+      --muted:#94a3b8;       /* slate-400 */
+      --text:#e5e7eb;        /* gray-200 */
+      --accent:#22c55e;      /* green-500 */
+      --accent-600:#16a34a;  /* green-600 */
+      --danger:#ef4444;      /* red-500 */
+      --border:#1f2937;      /* gray-800 */
+      --code-bg:#0b1220;     /* deep bg for code */
+    }
+    *{ box-sizing: border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; background:linear-gradient(180deg,#0b1020, #0f172a 30%, #0f172a);
+      color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:grid; place-items:center; padding:24px;
+    }
+    .wrap{ width:min(920px, 100%); margin:auto; }
+    .card{
+      background:rgba(17,24,39,0.75);
+      border:1px solid var(--border);
+      backdrop-filter:saturate(140%) blur(6px);
+      border-radius:18px; padding:20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1{
+      margin:0 0 6px; font-weight:700; letter-spacing:.2px; text-align:center;
+      font-size: clamp(20px, 2.5vw, 28px);
+    }
+    .sub{ color:var(--muted); text-align:center; margin:0 0 16px; }
+    .row{ display:flex; gap:10px; align-items:center; }
+    .stack{ display:flex; flex-direction:column; gap:10px; }
+    label{ font-size:13px; color:var(--muted); }
+    textarea{
+      width:100%; min-height:110px; resize:vertical;
+      background: #0c1426; color:var(--text);
+      border:1px solid var(--border); border-radius:12px;
+      padding:12px 14px; line-height:1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      outline:none; transition: border-color .2s, box-shadow .2s;
+    }
+    textarea::placeholder{ color:#64748b } /* slate-500 */
+    textarea:focus{
+      border-color:#334155; /* slate-700 */
+      box-shadow: 0 0 0 3px rgba(34,197,94,.15);
+    }
+    .btn{
+      background:var(--accent); border:0; color:#052e16;
+      padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px;
+      transition: transform .03s ease, filter .2s ease, background .2s ease;
+      user-select:none;
+    }
+    .btn:hover{ filter:brightness(1.05) }
+    .btn:active{ transform: translateY(1px) }
+    .btn.secondary{
+      background:transparent; color:var(--text); border:1px solid var(--border);
+    }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed }
+    .spinner{ width:16px; height:16px; border:2px solid rgba(255,255,255,.25); border-top-color:#052e16; border-radius:50%; animation:spin .9s linear infinite }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
+    .status{ margin-top:6px; min-height:22px; font-size:13px }
+    .status.ok{ color:var(--accent) }
+    .status.err{ color:var(--danger) }
+    .meta{ color:var(--muted); font-size:12px; margin-top:2px }
+    .output{
+      background: var(--code-bg);
+      border:1px solid var(--border); border-radius:12px;
+      padding:14px; margin-top:12px; overflow:auto; max-height:45vh;
+      white-space:pre-wrap; word-break:break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13.5px;
+    }
+    .toolbar{ display:flex; gap:8px; justify-content:flex-end; margin-top:6px }
+    .center{ display:flex; justify-content:center; align-items:center; gap:10px; }
+    .hint{ color:var(--muted); font-size:12px; text-align:right; }
+    .tag{ font-size:11px; color:#84cc16; background:#0a1a0d; border:1px solid #113a1d; padding:2px 6px; border-radius:999px }
+    .grid{ display:grid; gap:14px }
+    @media (max-width:640px){
+      .toolbar{ justify-content:stretch }
+      .btn{ flex:1 }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card grid">
+      <div class="center">
+        <h1>IaC Terraform Azure</h1>
+        <span class="tag">Modo: Agents (Proxy)</span>
+      </div>
+      <p class="sub">Escribe tu solicitud y el asistente generará código Terraform modular siguiendo tus estándares.</p>
+
+      <div class="stack">
+        <label for="prompt">Instrucción</label>
+        <!-- Placeholder sutil; desaparece al escribir por defecto -->
+        <textarea id="prompt" rows="5" placeholder="Escribe tu prompt aquí… (ej.: ‘Genera Terraform para una VNet /24 con dos subnets /26 y Azure Firewall Policy’)"
+                  aria-label="Área para escribir tu solicitud"></textarea>
+
+        <div class="toolbar">
+          <button id="btnReset" class="btn secondary" title="Inicia un nuevo thread de agente (borra el threadId local)">
+            Reset (nuevo thread)
+          </button>
+          <button id="btnSend" class="btn">
+            <span id="btnIcon">▶</span>
+            <span id="btnText">Enviar</span>
+          </button>
+        </div>
+
+        <div id="status" class="status">Listo.</div>
+        <div id="meta" class="meta">(thread: ninguno) · Tip: Ctrl/⌘ + Enter para enviar</div>
+
+        <div id="out" class="output">(Salida)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lógica -->
+  <script>
+    // ====== CONFIG ======
+    // ⬇️ Pega aquí la URL de tu Azure Function (incluye ?code=<FUNCTION_KEY> si aplica)
+    const PROXY_URL = "https://oscarmediacagent.azurewebsites.net/api/iac-agent?code=aALbdu6IrP8CwHK46gcDxEX_F-sDSP-78abfOHX1IJ0gAzFu2KyPYg==";
+
+    // ====== Estado del cliente (thread persistente en localStorage) ======
+    let threadId = localStorage.getItem("agent_thread_id") || null;
+
+    // ====== UI refs ======
+    const statusEl = document.getElementById('status');
+    const outEl = document.getElementById('out');
+    const metaEl = document.getElementById('meta');
+    const btnSend = document.getElementById('btnSend');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
+    const btnReset = document.getElementById('btnReset');
+    const promptEl = document.getElementById('prompt');
+
+    // ====== helpers UI ======
+    function setStatus(m, type="") {
+      statusEl.className = "status" + (type ? " " + type : "");
+      statusEl.textContent = m;
+    }
+    function show(x){ outEl.textContent = (typeof x === 'string') ? x : JSON.stringify(x, null, 2); }
+    function setLoading(loading){
+      btnSend.disabled = loading;
+      if (loading) {
+        btnIcon.innerHTML = '<span class="spinner"></span>';
+        btnText.textContent = "Consultando…";
+      } else {
+        btnIcon.textContent = "▶";
+        btnText.textContent = "Enviar";
+      }
+    }
+    function updateMeta(){
+      metaEl.textContent = `(thread: ${threadId ? threadId : 'ninguno'}) · Tip: Ctrl/⌘ + Enter para enviar`;
+    }
+
+    // ====== envío a Agents (proxy) ======
+    async function send(){
+      try{
+        const userText = (promptEl.value || "").trim();
+        if (!userText){
+          setStatus("Escribe tu prompt antes de enviar.", "err");
+          promptEl.focus();
+          return;
+        }
+
+        setLoading(true);
+        setStatus("Enviando solicitud…");
+
+        const resp = await fetch(PROXY_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: userText, threadId })
+        });
+
+        let data = null;
+        try { data = await resp.json(); } catch {}
+
+        if (!resp.ok){
+          setLoading(false);
+          setStatus(`Error HTTP ${resp.status}`, "err");
+          show(data || resp.statusText);
+          console.error("[error response]", data || resp.statusText);
+          return;
+        }
+
+        // Persistimos el threadId para mantener el contexto del agente
+        if (data.threadId && data.threadId !== threadId) {
+          threadId = data.threadId;
+          localStorage.setItem("agent_thread_id", threadId);
+          updateMeta();
+        }
+
+        const text = data?.output ?? "(sin salida)";
+
+        setLoading(false);
+        setStatus("OK", "ok");
+        show(text);
+
+        // Limpia el textarea luego de enviar
+        promptEl.value = "";
+        promptEl.focus();
+      }catch(err){
+        console.error(err);
+        setLoading(false);
+        setStatus("Fallo en fetch. Revisa la consola.", "err");
+        show(String(err));
+      }
+    }
+
+    // ====== reset de thread ======
+    function resetConversation(){
+      localStorage.removeItem("agent_thread_id");
+      threadId = null;
+      updateMeta();
+      setStatus("Conversación reiniciada (nuevo thread).", "ok");
+      show("(Salida)");
+      promptEl.focus();
+    }
+
+    // ====== init ======
+    function init(){
+      setStatus("Listo.");
+      updateMeta();
+
+      // Eventos
+      btnSend.addEventListener("click", send);
+      btnReset.addEventListener("click", resetConversation);
+
+      // Atajo Ctrl/⌘ + Enter
+      promptEl.addEventListener("keydown", (e)=>{
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault(); send();
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
