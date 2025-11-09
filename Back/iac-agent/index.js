@@ -10,8 +10,8 @@
 const { DefaultAzureCredential } = require("@azure/identity");
 const fetch = global.fetch;
 
-const PROJECT_ENDPOINT = "https://oscarmedagent.services.ai.azure.com/api/projects/firstProject";
-const AGENT_ID        = "asst_HXm8O6Gr5D02ePXt1d2N3xsq";
+const PROJECT_ENDPOINT = "https://xxxxxxxxxx.services.ai.azure.com/api/projects/firstProject";
+const AGENT_ID        = "xxxxxxxxxx";
 
 const ALLOWED_ORIGIN  = process.env.CORS_ORIGIN || "*";
 const API_VERSION     = "v1";
